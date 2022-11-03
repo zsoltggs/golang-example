@@ -1,0 +1,30 @@
+version: "3"
+services:
+  client-api-service:
+    depends_on: [pds-mongo]
+    image: cas:local
+    container_name: client-api-service
+    ports:
+      - 8080:8080
+    environment:
+      - REST_PORT=8080
+      - INPUT_PORTS_FILE=/build/ports.json
+      - PORT_DOMAIN_SERVICE_API=port-domain-service:8090
+
+  port-domain-service:
+    depends_on: [client-api-service]
+    image: pds:local
+    container_name: port-domain-service
+    ports:
+      - 8090:8090
+    environment:
+      - GRPC_PORT=8090
+      - MONGO=mongodb://pds-mongo:27017
+
+  pds-mongo:
+    container_name: pds-mongo
+    image: mongo:4.2
+    ports:
+      - 27017:27017
+    restart: always
+    entrypoint: [ "/usr/bin/mongod", "--bind_ip_all" ]

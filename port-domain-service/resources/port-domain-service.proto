@@ -1,0 +1,50 @@
+syntax = 'proto3';
+package pds;
+option go_package = "github.com/zsoltggs/golang-example/pkg/pds";
+
+import "google/protobuf/empty.proto";
+
+message Port {
+  string name = 1;
+  string city = 2;
+  string country= 3;
+  repeated string alias = 4;
+  repeated string regions = 5;
+  string province = 6;
+  string timezone= 7;
+  repeated string unlocs = 8;
+  string code = 9;
+  string id = 10;
+  repeated float coordinates = 11;
+}
+
+message UpsertPortRequest {
+  Port port = 1;
+}
+
+message Pagination {
+  int32 offset = 1;
+  int32 limit = 2;
+}
+
+message GetPortsPaginatedRequest {
+  Pagination pagination = 1;
+}
+
+message GetPortsPaginatedResponse {
+  repeated Port ports = 1;
+}
+
+message GetPortByIDRequest {
+  string id = 1;
+}
+
+message GetPortByIDResponse {
+  Port port = 1;
+}
+
+service Service {
+  rpc UpsertPort(UpsertPortRequest) returns (google.protobuf.Empty);
+  rpc GetPortsPaginated(GetPortsPaginatedRequest) returns (GetPortsPaginatedResponse);
+  rpc GetPortByID(GetPortByIDRequest) returns (GetPortByIDResponse);
+}
