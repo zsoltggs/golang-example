@@ -4,7 +4,9 @@ go 1.18
 
 require (
 	github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8
+	github.com/go-test/deep v1.0.8
 	github.com/golang/mock v1.6.0
+	github.com/google/uuid v1.1.2
 	github.com/gorilla/mux v1.8.0
 	github.com/jawher/mow.cli v1.2.0
 	github.com/sirupsen/logrus v1.9.0

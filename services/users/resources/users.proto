@@ -1,0 +1,70 @@
+syntax = 'proto3';
+package pds;
+option go_package = "github.com/zsoltggs/golang-example/pkg/users";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+message User {
+  string id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  string nickname = 4;
+  string password = 5;
+  string email = 6;
+  string country = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message CreateUserRequest {
+  User user = 1;
+}
+
+message GetUserRequest {
+  string id = 1;
+}
+
+message GetUserResponse {
+  User user = 1;
+}
+
+message PatchUserRequest {
+  User user = 1;
+}
+
+message PatchUserResponse {
+  User user = 1;
+}
+
+message DeleteUserRequest {
+  string id = 1;
+}
+
+message ListUsersRequest {
+  Filters filters = 1;
+  Pagination pagination = 2;
+}
+
+message Filters {
+  string email = 1;
+  string country = 2;
+}
+
+message ListUsersResponse {
+  repeated User users = 1;
+}
+
+message Pagination {
+  int32 offset = 1;
+  int32 limit = 2;
+}
+
+
+service Service {
+  rpc CreateUser(CreateUserRequest) returns (google.protobuf.Empty);
+  rpc PatchUser(PatchUserRequest) returns (google.protobuf.Empty);
+  rpc DeleteUser(DeleteUserRequest) returns (google.protobuf.Empty);
+  rpc GetByID(GetUserRequest) returns (GetUserResponse);
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+}

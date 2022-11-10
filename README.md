@@ -1,6 +1,32 @@
+# Users
+
+## How to run it
+
+```
+make build-docker
+docker-compose up
+```
+
+For tests to work you need to run `docker-compose up`, it depends on mongo
+
+## How to make better
+
+- Add better unit testing
+  - e.g. Repository level tests
+- Define proper indexes in mongo
+- Use a library for health
+  - make it generic to check for multiple services
+- Generalize Makefile
+- Currently notifier service just logs things
+  - Would be better to actually publish a message to a queue e.g. Kafka
+- Currently Create performs an upsert
+  - it still notifies users about user change
+- Better testing e.g. proper mocking for svc layer, e2e testing
+
+
 # Ports
 
-TODO
+- TODO
 
 ## Assumptions/Notes
 

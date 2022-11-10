@@ -21,6 +21,18 @@ services:
       - GRPC_PORT=8090
       - MONGO=mongodb://pds-mongo:27017
 
+  users:
+    depends_on: [ pds-mongo ]
+    image: users:local
+    container_name: users
+    ports:
+      - 9999:8080
+      - 10000:8090
+    environment:
+      - REST_PORT=8080
+      - GRPC_PORT=8090
+      - MONGO=mongodb://pds-mongo:27017
+
   pds-mongo:
     container_name: pds-mongo
     image: mongo:4.2

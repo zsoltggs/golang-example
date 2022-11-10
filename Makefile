@@ -1,8 +1,13 @@
 protos:
-	mkdir -p ./port-domain-service/pkg/generated
-	protoc --go_out=./port-domain-service/pkg/generated \
-	--go-grpc_out=require_unimplemented_servers=true:./port-domain-service/pkg/generated \
-	./port-domain-service/resources/port-domain-service.proto
+	# PDS
+	mkdir -p ./pkg
+	protoc --go_out=${GOPATH}/src \
+	--go-grpc_out=require_unimplemented_servers=true:${GOPATH}/src \
+	./services/port-domain-service/resources/port-domain-service.proto
+	# Users
+	protoc --go_out=${GOPATH}/src \
+	--go-grpc_out=require_unimplemented_servers=true:${GOPATH}/src \
+	./services/users/resources/users.proto
 
 lint:
 	golangci-lint run
@@ -10,16 +15,23 @@ lint:
 
 .PHONY: build
 build:
-	GOOS=linux go build -o ./client-api-service/build/cas ./client-api-service/cmd/client-api-service/main.go
-	GOOS=linux go build -o ./port-domain-service/build/pds ./port-domain-service/cmd/port-domain-service/main.go
+	GOOS=linux go build -o ./services/client-api-service/build/cas ./services/client-api-service/cmd/client-api-service/main.go
+	GOOS=linux go build -o ./services/port-domain-service/build/pds ./services/port-domain-service/cmd/port-domain-service/main.go
+	GOOS=linux go build -o ./services/users/build/users ./services/users/cmd/users/main.go
 
 .PHONY: clean
 clean:
 	rm -rf build
-	rm -rf ./client-api-service/build
-	rm -rf ./port-domain-service/build
+	rm -rf ./services/client-api-service/build
+	rm -rf ./services/port-domain-service/build
+	rm -rf ./services/users/build
 
 .PHONY: build-docker
 build-docker: build
-	docker build --no-cache -t cas:local ./client-api-service --build-arg SERVICE=client-api-service
-	docker build --no-cache -t pds:local ./port-domain-service --build-arg SERVICE=port-domain-service
+	docker build --no-cache -t cas:local ./services/client-api-service --build-arg SERVICE=client-api-service
+	docker build --no-cache -t pds:local ./services/port-domain-service --build-arg SERVICE=port-domain-service
+	docker build --no-cache -t users:local ./services/users --build-arg SERVICE=users
+
+.PHONY: generate-mocks
+generate-mocks:
+	echo "asd"
