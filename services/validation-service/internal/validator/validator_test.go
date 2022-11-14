@@ -16,27 +16,14 @@ const (
 )
 
 func readFileContents(t *testing.T, fileName string) string {
-	f, err := os.Open(configDocFileName)
+	f, err := os.Open(fileName)
 	require.NoError(t, err)
 	fContents, err := io.ReadAll(f)
 	require.NoError(t, err)
 	return string(fContents)
 }
 
-func Test_SchemaValidationSuccessful(t *testing.T) {
-	doc := readFileContents(t, configDocFileName)
-	schema := readFileContents(t, configSchemaFileName)
-	svc := validator.New()
-	ctx := context.Background()
-
-	err := svc.Validate(ctx, validator.JsonPair{
-		Schema: schema,
-		Doc:    doc,
-	})
-	require.NoError(t, err)
-}
-
-func Test_InvalidSchemas(t *testing.T) {
+func Test_SchemaValidationScenarios(t *testing.T) {
 	svc := validator.New()
 	ctx := context.Background()
 	schema := readFileContents(t, configSchemaFileName)
@@ -46,9 +33,10 @@ func Test_InvalidSchemas(t *testing.T) {
 		isErrExpected bool
 		expectedErr   string
 	}{
+
 		"empty": {
 			doc:           "{}",
-			isErrExpected: false,
+			isErrExpected: true,
 		},
 		"provided-example": {
 			doc:           readFileContents(t, configDocFileName),
@@ -58,22 +46,41 @@ func Test_InvalidSchemas(t *testing.T) {
 			doc: `{
 					  "source": "/home/alice/image.iso",
 					  "destination": "/mnt/storage",
-					  "timeout": "2",
+					  "timeout": 6,
   					  "chunks": {
-						number: 2
+						"number": 2
 					  }
 				   }
 `,
 			isErrExpected: true,
-			expectedErr:   "asd",
+			expectedErr:   "field: chunks, description: size is required",
+		},
+		"multiple-err-scenario": {
+			doc: `{
+					  "source": "/home/alice/image.iso",
+					  "destination": "/mnt/storage",
+					  "timeout": -10,
+  					  "chunks": {
+						"number": 2
+					  }
+				   }
+`,
+			isErrExpected: true,
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := svc.Validate(ctx, validator.JsonPair{
+			input := validator.InputJson{
 				Schema: schema,
 				Doc:    tc.doc,
+			}
+			docWithoutNulls, err := svc.RemoveNullValuesFromDoc(ctx, input)
+			require.NoError(t, err)
+
+			err = svc.Validate(ctx, validator.InputJson{
+				Schema: schema,
+				Doc:    docWithoutNulls,
 			})
 			if tc.isErrExpected {
 				assert.Error(t, err)
