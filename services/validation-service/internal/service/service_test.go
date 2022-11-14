@@ -20,7 +20,6 @@ import (
 
 var (
 	connString = "mongodb://localhost:27017"
-	dbName     = "schemas"
 )
 
 const (

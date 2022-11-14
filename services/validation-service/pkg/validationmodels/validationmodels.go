@@ -30,10 +30,10 @@ type ValidateRequest struct {
 }
 
 type StatusHttpResponse struct {
-	Action  string `json:"action"`
-	ID      string `json:"id"`
-	Status  string `json:"status"`
-	Message string `json:"message"`
+	Action  string `json:"action,omitempty"`
+	ID      string `json:"id,omitempty"`
+	Status  string `json:"status,omitempty"`
+	Message string `json:"message,omitempty"`
 }
 
 type ValidateResponse struct {

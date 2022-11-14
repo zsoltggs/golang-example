@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	configDocFileName    = "testdata/config.json"
-	configSchemaFileName = "testdata/config-schema.json"
+	configDocFileName    = "../../resources/config.json"
+	configSchemaFileName = "../../resources/config-schema.json"
 )
 
 func readFileContents(t *testing.T, fileName string) string {

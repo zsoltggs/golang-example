@@ -1,7 +1,7 @@
 version: "3"
 services:
   client-api-service:
-    depends_on: [pds-mongo]
+    depends_on: [zs-mongo]
     image: cas:local
     container_name: client-api-service
     ports:
@@ -19,10 +19,10 @@ services:
       - 8090:8090
     environment:
       - GRPC_PORT=8090
-      - MONGO=mongodb://pds-mongo:27017
+      - MONGO=mongodb://zs-mongo:27017
 
   users:
-    depends_on: [ pds-mongo ]
+    depends_on: [ zs-mongo ]
     image: users:local
     container_name: users
     ports:
@@ -31,23 +31,22 @@ services:
     environment:
       - REST_PORT=8080
       - GRPC_PORT=8090
-      - MONGO=mongodb://pds-mongo:27017
+      - MONGO=mongodb://zs-mongo:27017
 
   validation-service:
-    depends_on: [ pds-mongo ]
+    depends_on: [ zs-mongo ]
     image: validationsvc:local
     container_name: validation-service
     ports:
       - 11000:8080
     environment:
       - REST_PORT=8080
-      - MONGO=mongodb://pds-mongo:27017
+      - MONGO=mongodb://zs-mongo:27017
 
-  pds-mongo:
-    container_name: pds-mongo
+  zs-mongo:
+    container_name: zs-mongo
     image: mongo:4.2
     ports:
       - 27017:27017
     restart: always
     entrypoint: [ "/usr/bin/mongod", "--bind_ip_all" ]
-    # TODO Add volume

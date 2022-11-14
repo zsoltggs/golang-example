@@ -12,6 +12,8 @@ to run curl E2E curl requests:
 - `cd services/validation-service`
 - `./test.sh`
 
+to make sure data is not lost between restarts, attach a volume for mongo.
+
 # Users
 
 ## How to run it
