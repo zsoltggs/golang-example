@@ -19,7 +19,6 @@ import (
 
 var (
 	connString = "mongodb://localhost:27017"
-	dbName     = "ports"
 )
 
 func truncate(t *testing.T, databaseName string) {
@@ -150,6 +149,7 @@ func Test_List(t *testing.T) {
 	_, err = svc.CreateUser(ctx, &users.CreateUserRequest{
 		User: second,
 	})
+	require.NoError(t, err)
 
 	// with no filters returns all
 	res, err := svc.ListUsers(ctx, &users.ListUsersRequest{

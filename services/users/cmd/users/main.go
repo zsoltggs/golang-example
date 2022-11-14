@@ -81,8 +81,6 @@ func main() {
 			}
 		}()
 		defer func() { _ = httpServer.Shutdown(ctx) }()
-		// TODO Readme
-		// TODO Tests
 		waitForShutdown()
 	}
 
