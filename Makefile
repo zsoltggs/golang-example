@@ -9,8 +9,17 @@ protos:
 	--go-grpc_out=require_unimplemented_servers=true:${GOPATH}/src \
 	./services/users/resources/users.proto
 
+.PHONY: lint
 lint:
 	golangci-lint run
+
+.PHONY: test
+test:
+	go test ./...
+	# E2E tests with .http files are not supported yet, make sure to run them manually inside services/svc/tests/ folder
+
+.PHONY: verify
+verify: lint test
 
 
 .PHONY: build

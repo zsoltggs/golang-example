@@ -1,0 +1,63 @@
+### Post invalid schema
+POST localhost:11000/schema/config-schema
+Content-Type: application/json
+
+< ../resources/invalid.json
+
+> {%
+client.test('Given invalid schema is submitted, Error message is returned',function() {
+    client.assert(response.status === 400);
+})
+client.test('response msg contains Invalid JSON', function() {
+    client.assert(response.body.message === "Invalid JSON");
+})
+client.test('body status contains error', function() {
+    client.assert(response.body.status === "error");
+})
+%}
+
+### Post valid schema
+POST localhost:11000/schema/config-schema
+Content-Type: application/json
+
+< ../resources/config-schema.json
+
+> {%
+client.test('valid schema submitted returns 201',function() {
+    client.assert(response.status === 201);
+})
+%}
+
+### Get schema
+GET localhost:11000/schema/config-schema
+Content-Type: application/json
+
+> {%
+client.test('Get schema returns submitted schema',function() {
+    client.assert(response.status === 200);
+})
+%}
+
+### Validate Document
+POST localhost:11000/validate/config-schema
+Content-Type: application/json
+
+< ../resources/config.json
+
+> {%
+client.test('Validate document',function() {
+    client.assert(response.status === 200);
+})
+%}
+
+### If document cannot be validated, returns error
+POST localhost:11000/validate/config-schema
+Content-Type: application/json
+
+< ../resources/config-invalid.json
+
+> {%
+client.test('Invalid json document provided returns 400',function() {
+    client.assert(response.status === 400);
+})
+%}

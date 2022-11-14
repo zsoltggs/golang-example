@@ -1,9 +1,9 @@
 {
   "source": "/home/alice/image.iso",
   "destination": "/mnt/storage",
-  "timeout": -1,
+  "timeout": 1,
   "chunks": {
-    "size": 99999999999,
+    "size": 1234,
     "number": null
   }
 }

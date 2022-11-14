@@ -184,8 +184,8 @@ func (h Handler) validateDoc(response http.ResponseWriter, request *http.Request
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, service.ErrValidationError):
-		case errors.Is(err, service.ErrInvalidJSON):
+		case errors.Is(err, service.ErrInvalidJSON),
+			errors.Is(err, service.ErrValidationError):
 			responseJson, err := json.Marshal(resp.HttpResponse)
 			if err != nil {
 				log.WithError(err)
