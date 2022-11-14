@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/zsoltggs/golang-example/pkg/users"
-	"github.com/zsoltggs/golang-example/services/users/internal/database"
-	"github.com/zsoltggs/golang-example/services/users/internal/health"
-	"github.com/zsoltggs/golang-example/services/users/internal/notifier"
-	"github.com/zsoltggs/golang-example/services/users/internal/service"
+	"github.com/zsoltggs/golang-example/services/validation-service/internal/database"
+	"github.com/zsoltggs/golang-example/services/validation-service/internal/service"
 	"google.golang.org/grpc"
 	"net"
 	"net/http"
@@ -20,8 +18,30 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+/*
+- REST Service
+	- Upload JSON Schemas
+		- store them at unique URI
+	- Validate JSON documents against these URIs
+- Clean document before validation
+	- Remove keys for which the value is null
+
+POST    /schema/SCHEMAID        - Upload a JSON Schema with unique `SCHEMAID`
+GET     /schema/SCHEMAID        - Download a JSON Schema with unique `SCHEMAID`
+POST    /validate/SCHEMAID      - Validate a JSON document against the JSON Schema identified by `SCHEMAID`
+
+Use Case:
+- Upload schema
+	- /schema/SCHEMAID
+	- response: {"action": "uploadSchema", "id": "config-schema", "status": "success"} 201
+- Validate
+	- /validate/SCHEMAID
+	- Clean DOC
+	- {"action": "validateDocument", "id": "config-schema", "status": "success"} 200
+*/
+
 func main() {
-	app := cli.App("users-service", "CRUD api for users")
+	app := cli.App("validation-service", "CRUD api for users")
 	grpcPort := app.Int(cli.IntOpt{
 		Name:   "grpc-port",
 		Desc:   "GRPC port",
@@ -56,20 +76,19 @@ func main() {
 		if err != nil {
 			log.WithError(err).Panic("unable to connect to mongo")
 		}
-		usersService := service.New(db, notifier.NewLogNotifier())
+		usersService := service.New(db)
 
 		grpcServer := grpc.NewServer()
 		users.RegisterServiceServer(grpcServer, usersService)
 		startGRPCServer(grpcServer, *grpcPort)
 		defer grpcServer.GracefulStop()
 
-		healthSvc := health.New(db)
-
 		ctx := context.Background()
 		port := fmt.Sprintf(":%d", *restPort)
 		log.Infof("about to start server on port %s", port)
 		router := mux.NewRouter()
-		router.HandleFunc("/health", healthSvc.HttpHandler).
+		// TODO
+		router.HandleFunc("/health", nil).
 			Methods("GET")
 		httpServer := http.Server{
 			Addr:    port,

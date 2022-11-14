@@ -1,5 +1,10 @@
 # JSON validation service in Go
-Using this specification you will need to build a REST-service for validating JSON documents against JSON Schemas. This REST-service should allow users to upload JSON Schemas and store them at unique URI and then validate JSON documents against these URIs. Additionally, this service will "clean" every JSON document before validation: remove keys for which the value is null. Client-side software as well as GUI is out of scope of this specification - user can choose any tool able to communicate via HTTP like curl or write their own.
+Using this specification you will need to build a REST-service for validating JSON documents against JSON Schemas. This REST-service should allow users to upload JSON Schemas and store them at unique URI and then validate JSON documents against these URIs. 
+
+Additionally, this service will "clean" every JSON document before validation: 
+- remove keys for which the value is null. 
+- Client-side software as well as GUI is out of scope of this specification 
+- user can choose any tool able to communicate via HTTP like curl or write their own.
 
 ## Required knowledge
 This test requires some knowledge of JSON Schemas. You can find the full specification and examples on the official web site. However, a quick look at the tutorial should be enough to familiarize yourself with this tool. You will also need a very basic understanding of the RESTful architecture. Knowledge of git and GitHub are also required.
@@ -77,15 +82,15 @@ The returned message should contain a human-readable string or machine-readable 
 The potential user has a configuration JSON file `config.json` like the following:
 
 ```json
-   {
-   "source": "/home/alice/image.iso",
-   "destination": "/mnt/storage",
-   "timeout": null,
-   "chunks": {
-   "size": 1024,
-   "number": null
-   }
-   }
+{
+  "source": "/home/alice/image.iso",
+  "destination": "/mnt/storage",
+  "timeout": null,
+  "chunks": {
+    "size": 1024,
+    "number": null
+  }
+}
 ```
 And expects it conforms to the following JSON Schema config-schema.json:
 ```json
@@ -123,18 +128,18 @@ And expects it conforms to the following JSON Schema config-schema.json:
 ```
 
 To check that it really fits the schema:
-- The user should upload the JSON Schema: curl http://localhost/schema/config-schema -X POST -d @config-schema.json
-- The server should respond with: {"action": "uploadSchema", "id": "config-schema", "status": "success"} and status code 201
-- The user should upload the JSON document to validate it curl http://localhost/validate/config-schema -X POST -d @config.json
+- The user should upload the JSON Schema: `curl http://localhost/schema/config-schema -X POST -d @config-schema.json`
+- The server should respond with: `{"action": "uploadSchema", "id": "config-schema", "status": "success"}` and status code 201
+- The user should upload the JSON document to validate it `curl http://localhost/validate/config-schema -X POST -d @config.json`
 - The server should "clean" the uploaded JSON document to remove keys for which the value is null:
 ```json
-   {
-   "source": "/home/alice/image.iso",
-   "destination": "/mnt/storage",
-   "chunks": {
-   "size": 1024
-   }
-   }
+{
+  "source": "/home/alice/image.iso",
+  "destination": "/mnt/storage",
+  "chunks": {
+    "size": 1024
+  }
+}
 ```
 - The server should respond with: `{"action": "validateDocument", "id": "config-schema", "status": "success"}` and status code 200
 
