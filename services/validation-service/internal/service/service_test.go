@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zsoltggs/golang-example/services/validation-service/internal/database"
+	mockdb "github.com/zsoltggs/golang-example/services/validation-service/internal/mocks/database"
+	mockvalidator "github.com/zsoltggs/golang-example/services/validation-service/internal/mocks/validator"
 	"github.com/zsoltggs/golang-example/services/validation-service/internal/service"
 	"github.com/zsoltggs/golang-example/services/validation-service/internal/validator"
 	"github.com/zsoltggs/golang-example/services/validation-service/pkg/validationmodels"
@@ -117,9 +119,9 @@ func Test_Validate_SchemaValidation_Success(t *testing.T) {
 }
 
 func Test_UpsertSchema_InvalidSchema_TypedErrorReturned(t *testing.T) {
-	// TODO Add DB mock
+	mockDB := mockdb.NewDatabase(t)
 	validatorSvc := validator.New()
-	svc := service.New(nil, validatorSvc)
+	svc := service.New(mockDB, validatorSvc)
 	ctx := context.Background()
 	res, err := svc.UpsertSchema(ctx, &validationmodels.UpsertSchemaRequest{
 		SchemaID: schemaID,
@@ -140,9 +142,9 @@ func Test_UpsertSchema_InvalidSchema_TypedErrorReturned(t *testing.T) {
 }
 
 func Test_Validate_InvalidDoc_TypedErrorReturned(t *testing.T) {
-	// TODO Add DB mock
+	mockDB := mockdb.NewDatabase(t)
 	validatorSvc := validator.New()
-	svc := service.New(nil, validatorSvc)
+	svc := service.New(mockDB, validatorSvc)
 	ctx := context.Background()
 	res, err := svc.ValidateDocument(ctx, &validationmodels.ValidateRequest{
 		SchemaID: schemaID,
@@ -155,6 +157,43 @@ func Test_Validate_InvalidDoc_TypedErrorReturned(t *testing.T) {
 			ID:      schemaID,
 			Status:  "error",
 			Message: "Invalid JSON",
+		},
+	}
+	if diff := deep.Equal(expected, res); diff != nil {
+		t.Error(diff)
+	}
+}
+
+func Test_Validate_ValidationError_TypedErrorReturned(t *testing.T) {
+	mockDB := mockdb.NewDatabase(t)
+	mockValidator := mockvalidator.NewValidator(t)
+	svc := service.New(mockDB, mockValidator)
+	ctx := context.Background()
+	schema := "{schema}"
+	document := "{\"document\":\"valid\"}"
+	mockDB.On("GetSchema", ctx, schemaID).
+		Return(schema, nil)
+	mockValidator.On("RemoveNullValuesFromDoc", ctx, document).
+		Return(document, nil)
+	mockValidator.On("Validate", ctx, validator.InputJson{
+		Schema: schema,
+		Doc:    document,
+	}).Return(validator.SchemaValidationError{
+		Errors: []string{"invalid field..."},
+	})
+
+	res, err := svc.ValidateDocument(ctx, &validationmodels.ValidateRequest{
+		SchemaID: schemaID,
+		Document: document,
+	})
+	require.Error(t, err)
+	require.ErrorIs(t, err, service.ErrValidationError)
+	expected := &validationmodels.ValidateResponse{
+		HttpResponse: validationmodels.StatusHttpResponse{
+			Action:  "validateDocument",
+			ID:      schemaID,
+			Status:  "error",
+			Message: "invalid field...",
 		},
 	}
 	if diff := deep.Equal(expected, res); diff != nil {

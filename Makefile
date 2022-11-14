@@ -37,4 +37,7 @@ build-docker: build
 
 .PHONY: generate-mocks
 generate-mocks:
-	echo "asd"
+	for service in validation-service; do \
+		echo ./srv/$$service ; \
+		$(MAKE) -C ./services/$$service generate-mocks ; \
+	done
