@@ -1,3 +1,17 @@
+# Validation Service
+
+## How to run it
+
+```
+make build-docker
+docker-compose up
+```
+Service will be exposed on port 11000
+
+to run curl E2E curl requests:
+- `cd services/validation-service`
+- `./test.sh`
+
 # Users
 
 ## How to run it

@@ -22,10 +22,9 @@ var (
 )
 
 const (
-	configDocNoNullFileName = "../../resources/config-no-nulls.json"
-	configDocFileName       = "../../resources/config.json"
-	configSchemaFileName    = "../../resources/config-schema.json"
-	schemaID                = "config-schema"
+	configDocFileName    = "../../resources/config.json"
+	configSchemaFileName = "../../resources/config-schema.json"
+	schemaID             = "config-schema"
 )
 
 // These are integration tests make sure to run MongoDB for this to work
@@ -52,8 +51,8 @@ func Test_CreateAndGetSchema_Success(t *testing.T) {
 	truncate(t, t.Name())
 	db, err := database.NewMongo(connString, t.Name())
 	require.NoError(t, err)
-	validatorSvc := validator.Validator{}
-	svc := service.New(db, &validatorSvc)
+	validatorSvc := validator.New()
+	svc := service.New(db, validatorSvc)
 	ctx := context.Background()
 
 	inputSchema := readFileContents(t, configSchemaFileName)
@@ -85,12 +84,12 @@ func Test_CreateAndGetSchema_Success(t *testing.T) {
 	}
 }
 
-func Test_SchemaValidation_Success(t *testing.T) {
+func Test_Validate_SchemaValidation_Success(t *testing.T) {
 	truncate(t, t.Name())
 	db, err := database.NewMongo(connString, t.Name())
 	require.NoError(t, err)
-	validatorSvc := validator.Validator{}
-	svc := service.New(db, &validatorSvc)
+	validatorSvc := validator.New()
+	svc := service.New(db, validatorSvc)
 	ctx := context.Background()
 
 	inputSchema := readFileContents(t, configSchemaFileName)
@@ -110,6 +109,52 @@ func Test_SchemaValidation_Success(t *testing.T) {
 			Action: "validateDocument",
 			ID:     schemaID,
 			Status: "success",
+		},
+	}
+	if diff := deep.Equal(expected, res); diff != nil {
+		t.Error(diff)
+	}
+}
+
+func Test_UpsertSchema_InvalidSchema_TypedErrorReturned(t *testing.T) {
+	// TODO Add DB mock
+	validatorSvc := validator.New()
+	svc := service.New(nil, validatorSvc)
+	ctx := context.Background()
+	res, err := svc.UpsertSchema(ctx, &validationmodels.UpsertSchemaRequest{
+		SchemaID: schemaID,
+		Schema:   "{,,,...",
+	})
+	assert.Error(t, err)
+	expected := &validationmodels.UpsertSchemaResponse{
+		HttpResponse: validationmodels.StatusHttpResponse{
+			Action:  "uploadSchema",
+			ID:      schemaID,
+			Status:  "error",
+			Message: "Invalid JSON",
+		},
+	}
+	if diff := deep.Equal(expected, res); diff != nil {
+		t.Error(diff)
+	}
+}
+
+func Test_Validate_InvalidDoc_TypedErrorReturned(t *testing.T) {
+	// TODO Add DB mock
+	validatorSvc := validator.New()
+	svc := service.New(nil, validatorSvc)
+	ctx := context.Background()
+	res, err := svc.ValidateDocument(ctx, &validationmodels.ValidateRequest{
+		SchemaID: schemaID,
+		Document: "{,,,...",
+	})
+	assert.Error(t, err)
+	expected := &validationmodels.ValidateResponse{
+		HttpResponse: validationmodels.StatusHttpResponse{
+			Action:  "validateDocument",
+			ID:      schemaID,
+			Status:  "error",
+			Message: "Invalid JSON",
 		},
 	}
 	if diff := deep.Equal(expected, res); diff != nil {

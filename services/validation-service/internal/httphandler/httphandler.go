@@ -3,6 +3,7 @@ package httphandler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -75,22 +76,32 @@ func (h Handler) postSchema(response http.ResponseWriter, request *http.Request)
 		return
 	}
 	ctx := context.Background()
-	// TODO Check if the document is valid JSON or not
-	/*
-			{
-		  "action": "uploadSchema",
-		  "id": "config-schema",
-		  "status": "error",
-		  "message": "Invalid JSON"
-		}
-	*/
 	resp, err := h.svc.UpsertSchema(ctx, &validationmodels.UpsertSchemaRequest{
 		SchemaID: schemaID,
 		Schema:   string(body),
 	})
 	if err != nil {
-		log.WithError(err).Info("unable to upsert schema")
-		response.WriteHeader(http.StatusInternalServerError)
+		switch {
+		case errors.Is(err, service.ErrInvalidJSON):
+			responseJson, err := json.Marshal(resp.HttpResponse)
+			if err != nil {
+				log.WithError(err)
+				response.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			response.Header().Set("Content-Type", "application/json")
+			response.WriteHeader(http.StatusBadRequest)
+			_, err = response.Write(responseJson)
+			if err != nil {
+				log.WithError(err)
+				response.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+		default:
+			log.WithError(err).Info("unable to validate document")
+			response.WriteHeader(http.StatusInternalServerError)
+		}
 		return
 	}
 	responseJson, err := json.Marshal(resp.HttpResponse)
@@ -164,26 +175,36 @@ func (h Handler) validateDoc(response http.ResponseWriter, request *http.Request
 	if err != nil {
 		log.WithError(err).Info("error unmarshaling request body")
 		response.WriteHeader(http.StatusBadRequest)
-		// TODO Display validation error
 		return
 	}
 	ctx := context.Background()
-	/*
-		TODO Return what property is invalid
-		{
-		   "action": "validateDocument",
-		   "id": "config-schema",
-		   "status": "error",
-		   "message": "Property '/root/timeout' is required"
-		}
-	*/
 	resp, err := h.svc.ValidateDocument(ctx, &validationmodels.ValidateRequest{
 		SchemaID: schemaID,
 		Document: string(body),
 	})
 	if err != nil {
-		log.WithError(err).Info("unable to validate document")
-		response.WriteHeader(http.StatusInternalServerError)
+		switch {
+		case errors.Is(err, service.ErrValidationError):
+		case errors.Is(err, service.ErrInvalidJSON):
+			responseJson, err := json.Marshal(resp.HttpResponse)
+			if err != nil {
+				log.WithError(err)
+				response.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			response.Header().Set("Content-Type", "application/json")
+			response.WriteHeader(http.StatusBadRequest)
+			_, err = response.Write(responseJson)
+			if err != nil {
+				log.WithError(err)
+				response.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+		default:
+			log.WithError(err).Info("unable to validate document")
+			response.WriteHeader(http.StatusInternalServerError)
+		}
 		return
 	}
 	responseJson, err := json.Marshal(resp.HttpResponse)

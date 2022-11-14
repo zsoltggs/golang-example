@@ -2,12 +2,16 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/zsoltggs/golang-example/services/validation-service/internal/database"
 	"github.com/zsoltggs/golang-example/services/validation-service/internal/validator"
 	"github.com/zsoltggs/golang-example/services/validation-service/pkg/validationmodels"
 )
+
+var ErrInvalidJSON = errors.New("invalid JSON")
+var ErrValidationError = errors.New("validation error")
 
 type Service interface {
 	UpsertSchema(ctx context.Context,
@@ -32,7 +36,16 @@ func New(db database.Database, validatorSvc validator.Validator) Service {
 
 func (s service) UpsertSchema(ctx context.Context,
 	req *validationmodels.UpsertSchemaRequest) (*validationmodels.UpsertSchemaResponse, error) {
-	// TODO Validate arguments before calling this
+	if !json.Valid([]byte(req.Schema)) {
+		return &validationmodels.UpsertSchemaResponse{
+			HttpResponse: validationmodels.StatusHttpResponse{
+				Action:  "uploadSchema",
+				ID:      req.SchemaID,
+				Status:  "error",
+				Message: "Invalid JSON",
+			},
+		}, ErrInvalidJSON
+	}
 
 	err := s.db.UpsertSchema(ctx, req)
 	if err != nil {
@@ -61,6 +74,17 @@ func (s service) GetSchemaByID(ctx context.Context,
 
 func (s service) ValidateDocument(ctx context.Context,
 	req *validationmodels.ValidateRequest) (*validationmodels.ValidateResponse, error) {
+	if !json.Valid([]byte(req.Document)) {
+		return &validationmodels.ValidateResponse{
+			HttpResponse: validationmodels.StatusHttpResponse{
+				Action:  "validateDocument",
+				ID:      req.SchemaID,
+				Status:  "error",
+				Message: "Invalid JSON",
+			},
+		}, ErrInvalidJSON
+	}
+
 	schema, err := s.db.GetSchema(ctx, req.SchemaID)
 	if err != nil {
 		//TODO Better error handling
@@ -75,7 +99,20 @@ func (s service) ValidateDocument(ctx context.Context,
 		Doc:    documentWithoutNull,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("unable to validate document: %w", err)
+		switch {
+		case errors.As(err, &validator.SchemaValidationError{}):
+			return &validationmodels.ValidateResponse{
+				HttpResponse: validationmodels.StatusHttpResponse{
+					Action:  "validateDocument",
+					ID:      req.SchemaID,
+					Status:  "error",
+					Message: err.Error(),
+				},
+			}, ErrValidationError
+		default:
+			return nil, fmt.Errorf("unable to validate document: %w", err)
+		}
+
 	}
 
 	return &validationmodels.ValidateResponse{

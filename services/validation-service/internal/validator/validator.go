@@ -3,7 +3,6 @@ package validator
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/xeipuuv/gojsonschema"
 	"reflect"
@@ -27,8 +26,12 @@ type InputJson struct {
 	Doc    string
 }
 
-type ErrorInfo struct {
-	Field, Description string
+type SchemaValidationError struct {
+	Errors []string
+}
+
+func (m SchemaValidationError) Error() string {
+	return strings.Join(m.Errors, ",")
 }
 
 func (*gojsonschemaValidator) Validate(ctx context.Context, p InputJson) error {
@@ -46,9 +49,9 @@ func (*gojsonschemaValidator) Validate(ctx context.Context, p InputJson) error {
 		var allErrors []string
 		for _, err := range result.Errors() {
 			// Err implements the ResultError interface
-			allErrors = append(allErrors, fmt.Sprintf("field: %s, description: %s", err.Field(), err.Description()))
+			allErrors = append(allErrors, fmt.Sprintf("Property %s %s", err.Field(), err.Description()))
 		}
-		return errors.New(strings.Join(allErrors, "\n"))
+		return SchemaValidationError{allErrors}
 	}
 	return nil
 }
