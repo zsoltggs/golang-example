@@ -3,13 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/zsoltggs/golang-example/pkg/users"
 	"github.com/zsoltggs/golang-example/services/validation-service/internal/database"
+	"github.com/zsoltggs/golang-example/services/validation-service/internal/httphandler"
 	"github.com/zsoltggs/golang-example/services/validation-service/internal/service"
-	"google.golang.org/grpc"
-	"net"
-	"net/http"
+	"github.com/zsoltggs/golang-example/services/validation-service/internal/validator"
 	"os"
 	"os/signal"
 	"syscall"
@@ -42,12 +39,6 @@ Use Case:
 
 func main() {
 	app := cli.App("validation-service", "CRUD api for users")
-	grpcPort := app.Int(cli.IntOpt{
-		Name:   "grpc-port",
-		Desc:   "GRPC port",
-		Value:  8090,
-		EnvVar: "GRPC_PORT",
-	})
 	mongoConnStr := app.String(cli.StringOpt{
 		Name:   "mongo",
 		Desc:   "connection string",
@@ -59,7 +50,7 @@ func main() {
 		Name:   "mongo-database",
 		Desc:   "Database name for mongo",
 		EnvVar: "MONGO_DB",
-		Value:  "users",
+		Value:  "validation-service",
 	})
 
 	restPort := app.Int(cli.IntOpt{
@@ -76,30 +67,13 @@ func main() {
 		if err != nil {
 			log.WithError(err).Panic("unable to connect to mongo")
 		}
-		usersService := service.New(db)
-
-		grpcServer := grpc.NewServer()
-		users.RegisterServiceServer(grpcServer, usersService)
-		startGRPCServer(grpcServer, *grpcPort)
-		defer grpcServer.GracefulStop()
+		validationService := validator.New()
+		svc := service.New(db, validationService)
 
 		ctx := context.Background()
-		port := fmt.Sprintf(":%d", *restPort)
-		log.Infof("about to start server on port %s", port)
-		router := mux.NewRouter()
-		// TODO
-		router.HandleFunc("/health", nil).
-			Methods("GET")
-		httpServer := http.Server{
-			Addr:    port,
-			Handler: router,
-		}
-		go func() {
-			if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Fatalf("listen: %s\n", err)
-			}
-		}()
-		defer func() { _ = httpServer.Shutdown(ctx) }()
+		handler := httphandler.NewHandler(svc, *restPort)
+		go handler.ListenAndServe()
+		defer handler.Shutdown(ctx)
 		waitForShutdown()
 	}
 
@@ -107,19 +81,6 @@ func main() {
 	if err != nil {
 		log.WithError(err).Panic("service stopped")
 	}
-}
-
-func startGRPCServer(server *grpc.Server, grpcPort int) {
-	listen, err := net.Listen("tcp", fmt.Sprintf(":%d", grpcPort))
-	if err != nil {
-		log.WithError(err).Panicf("failed to listen on port :%d", grpcPort)
-	}
-
-	go func() {
-		if err := server.Serve(listen); err != nil {
-			log.WithError(err).Panic("failed to serve GRPC connections")
-		}
-	}()
 }
 
 // Graceful shutdown

@@ -71,11 +71,7 @@ func Test_SchemaValidationScenarios(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			input := validator.InputJson{
-				Schema: schema,
-				Doc:    tc.doc,
-			}
-			docWithoutNulls, err := svc.RemoveNullValuesFromDoc(ctx, input)
+			docWithoutNulls, err := svc.RemoveNullValuesFromDoc(ctx, tc.doc)
 			require.NoError(t, err)
 
 			err = svc.Validate(ctx, validator.InputJson{

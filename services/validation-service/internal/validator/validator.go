@@ -10,12 +10,16 @@ import (
 	"strings"
 )
 
-type Validator struct {
+type Validator interface {
+	Validate(ctx context.Context, p InputJson) error
+	RemoveNullValuesFromDoc(ctx context.Context, doc string) (string, error)
 }
 
-// TODO Interface
-func New() *Validator {
-	return &Validator{}
+type gojsonschemaValidator struct {
+}
+
+func New() Validator {
+	return &gojsonschemaValidator{}
 }
 
 type InputJson struct {
@@ -27,7 +31,7 @@ type ErrorInfo struct {
 	Field, Description string
 }
 
-func (*Validator) Validate(ctx context.Context, p InputJson) error {
+func (*gojsonschemaValidator) Validate(ctx context.Context, p InputJson) error {
 	schemaLoader := gojsonschema.NewStringLoader(p.Schema)
 	gSchema, err := gojsonschema.NewSchema(schemaLoader)
 	if err != nil {
@@ -49,9 +53,9 @@ func (*Validator) Validate(ctx context.Context, p InputJson) error {
 	return nil
 }
 
-func (*Validator) RemoveNullValuesFromDoc(ctx context.Context, p InputJson) (string, error) {
+func (*gojsonschemaValidator) RemoveNullValuesFromDoc(ctx context.Context, doc string) (string, error) {
 	convertedMap := map[string]interface{}{}
-	err := json.Unmarshal([]byte(p.Doc), &convertedMap)
+	err := json.Unmarshal([]byte(doc), &convertedMap)
 	if err != nil {
 		return "", err
 	}

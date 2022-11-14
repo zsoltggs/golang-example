@@ -2,97 +2,87 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/zsoltggs/golang-example/pkg/users"
 	"github.com/zsoltggs/golang-example/services/validation-service/internal/database"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
+	"github.com/zsoltggs/golang-example/services/validation-service/internal/validator"
+	"github.com/zsoltggs/golang-example/services/validation-service/pkg/validationmodels"
 )
 
-type Service struct {
-	users.UnimplementedServiceServer
-	db database.Database
+type Service interface {
+	UpsertSchema(ctx context.Context,
+		req *validationmodels.UpsertSchemaRequest) (*validationmodels.UpsertSchemaResponse, error)
+	GetSchemaByID(ctx context.Context,
+		request *validationmodels.GetSchemaRequest) (*validationmodels.GetSchemaResponse, error)
+	ValidateDocument(ctx context.Context,
+		req *validationmodels.ValidateRequest) (*validationmodels.ValidateResponse, error)
 }
 
-func New(db database.Database) *Service {
-	return &Service{
-		db: db,
+type service struct {
+	db           database.Database
+	validatorSvc validator.Validator
+}
+
+func New(db database.Database, validatorSvc validator.Validator) Service {
+	return &service{
+		db:           db,
+		validatorSvc: validatorSvc,
 	}
 }
 
-func (s Service) CreateUser(ctx context.Context, request *users.CreateUserRequest) (*emptypb.Empty, error) {
-	if request.GetUser().GetId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
-	}
+func (s service) UpsertSchema(ctx context.Context,
+	req *validationmodels.UpsertSchemaRequest) (*validationmodels.UpsertSchemaResponse, error) {
+	// TODO Validate arguments before calling this
 
-	err := s.db.Create(ctx, request.GetUser())
+	err := s.db.UpsertSchema(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create user: %w", err)
+		return nil, fmt.Errorf("unable to create schema: %w", err)
 	}
-	return &emptypb.Empty{}, nil
-}
-
-func (s Service) PatchUser(ctx context.Context, request *users.PatchUserRequest) (*emptypb.Empty, error) {
-	if request.GetUser().GetId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
-	}
-
-	err := s.db.Patch(ctx, request.GetUser())
-	if err != nil {
-		return nil, fmt.Errorf("unable to patch user: %w", err)
-	}
-	return &emptypb.Empty{}, nil
-}
-
-func (s Service) DeleteUser(ctx context.Context, request *users.DeleteUserRequest) (*emptypb.Empty, error) {
-	if request.GetId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
-	}
-
-	err := s.db.Delete(ctx, request.GetId())
-	if err != nil {
-		return nil, fmt.Errorf("unable to delete user: %w", err)
-	}
-	return &emptypb.Empty{}, nil
-}
-
-func (s Service) ListUsers(ctx context.Context, request *users.ListUsersRequest) (*users.ListUsersResponse, error) {
-	// Make sure pagination is always present
-	request.Pagination = defaultPagination(request.Pagination)
-	results, err := s.db.List(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf("unable to list users: %w", err)
-	}
-	return &users.ListUsersResponse{
-		Users: results,
+	return &validationmodels.UpsertSchemaResponse{
+		HttpResponse: validationmodels.StatusHttpResponse{
+			Action: "uploadSchema",
+			ID:     req.SchemaID,
+			Status: "success",
+		},
 	}, nil
 }
-func defaultPagination(pagination *users.Pagination) *users.Pagination {
-	if pagination == nil {
-		return &users.Pagination{
-			Offset: 0,
-			Limit:  10,
-		}
-	}
-	newPagination := users.Pagination{
-		Offset: pagination.GetOffset(),
-		Limit:  pagination.GetLimit(),
-	}
 
-	if newPagination.Limit == 0 {
-		newPagination.Limit = 10
-	}
-
-	return &newPagination
-}
-
-func (s Service) GetByID(ctx context.Context, request *users.GetUserRequest) (*users.GetUserResponse, error) {
-	result, err := s.db.GetByID(ctx, request.GetId())
+func (s service) GetSchemaByID(ctx context.Context,
+	request *validationmodels.GetSchemaRequest) (*validationmodels.GetSchemaResponse, error) {
+	result, err := s.db.GetSchema(ctx, request.ID)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get by id: %w", err)
 	}
-	return &users.GetUserResponse{
-		User: result,
+	return &validationmodels.GetSchemaResponse{
+		ID:     request.ID,
+		Schema: result,
+	}, nil
+}
+
+func (s service) ValidateDocument(ctx context.Context,
+	req *validationmodels.ValidateRequest) (*validationmodels.ValidateResponse, error) {
+	schema, err := s.db.GetSchema(ctx, req.SchemaID)
+	if err != nil {
+		//TODO Better error handling
+		return nil, errors.New("not found")
+	}
+	documentWithoutNull, err := s.validatorSvc.RemoveNullValuesFromDoc(ctx, req.Document)
+	if err != nil {
+		return nil, fmt.Errorf("unable to remove null values from document: %w", err)
+	}
+	err = s.validatorSvc.Validate(ctx, validator.InputJson{
+		Schema: schema,
+		Doc:    documentWithoutNull,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("unable to validate document: %w", err)
+	}
+
+	return &validationmodels.ValidateResponse{
+		HttpResponse: validationmodels.StatusHttpResponse{
+			Action: "validateDocument",
+			ID:     req.SchemaID,
+			Status: "success",
+		},
 	}, nil
 }
